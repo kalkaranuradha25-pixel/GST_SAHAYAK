@@ -1,7 +1,7 @@
 """
-inference.py — Hackathon Entry Point (MANDATORY)
+inference.py â€” Hackathon Entry Point (MANDATORY)
 
-Output protocol (must be exact — any deviation causes scoring failure):
+Output protocol (must be exact â€” any deviation causes scoring failure):
     [START] task=<name> env=gst-intelligence model=<model>
     [STEP]  step=<n> action=<str> reward=<0.00> done=<true|false> error=<msg|null>
     [END]   success=<true|false> steps=<n> rewards=<r1,r2,...>
@@ -9,7 +9,7 @@ Output protocol (must be exact — any deviation causes scoring failure):
 Rules:
     - One [START] at episode begin
     - One [STEP] per step, immediately after env.step() returns
-    - One [END] after env.close(), ALWAYS (even on exception) — use try/finally
+    - One [END] after env.close(), ALWAYS (even on exception) â€” use try/finally
     - reward and rewards formatted to 2 decimal places
     - done and success are lowercase: true / false
     - error is raw last_action_error string, or null
@@ -25,20 +25,20 @@ import traceback
 from datetime import datetime, timezone
 from typing import Optional
 
-# ─────────────────────────────────────────────────────────────────────────────
-# Environment variables (MANDATORY — do not change defaults or remove checks)
-# ─────────────────────────────────────────────────────────────────────────────
+# â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+# Environment variables (MANDATORY â€” do not change defaults or remove checks)
+# â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 API_BASE_URL = os.getenv("API_BASE_URL", "https://api.openai.com/v1")   # MUST have default
 MODEL_NAME   = os.getenv("MODEL_NAME",   "gpt-4.1-mini")                # MUST have default
-HF_TOKEN     = os.getenv("HF_TOKEN")                                     # NO default — mandatory
+HF_TOKEN     = os.getenv("HF_TOKEN")                                     # NO default â€” mandatory
 
 if HF_TOKEN is None:
     raise ValueError("HF_TOKEN environment variable is required")
 
-# ─────────────────────────────────────────────────────────────────────────────
+# â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 # Imports (after env var check)
-# ─────────────────────────────────────────────────────────────────────────────
+# â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 import openai
 
@@ -53,18 +53,18 @@ from models.action import (
 )
 from models.observation import GSTObservation
 
-# ─────────────────────────────────────────────────────────────────────────────
-# OpenAI client (MANDATORY — no direct HTTP)
-# ─────────────────────────────────────────────────────────────────────────────
+# â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+# OpenAI client (MANDATORY â€” no direct HTTP)
+# â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 client = openai.OpenAI(
     api_key=HF_TOKEN,
     base_url=API_BASE_URL,
 )
 
-# ─────────────────────────────────────────────────────────────────────────────
+# â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 # Task metadata
-# ─────────────────────────────────────────────────────────────────────────────
+# â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 TASK_NAMES = {
     1: "invoice_classification",
@@ -80,13 +80,13 @@ GSTR3B_SECTION_ORDER = [
     "6.1", "6.2", "6.3",
 ]
 
-# ─────────────────────────────────────────────────────────────────────────────
+# â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 # Prompt builders
-# ─────────────────────────────────────────────────────────────────────────────
+# â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 SYSTEM_PROMPT = """You are an expert Indian GST compliance agent.
 You process invoices and GST returns for Indian businesses.
-You always respond with a single valid JSON object — no markdown, no explanation.
+You always respond with a single valid JSON object â€” no markdown, no explanation.
 Respond only with the JSON action object requested."""
 
 
@@ -184,13 +184,13 @@ Mismatch:
   delta: {top.delta}
 
 Rules:
-- not_in_2b → use defer_invoice action
-- amount_diff < 1000 → accept_mismatch
-- amount_diff > 10000 → flag_discrepancy with recommended_action=dispute
-- fake_invoice → flag_discrepancy with recommended_action=dispute
-- cancelled → flag_discrepancy with recommended_action=hold_itc
-- duplicate → flag_discrepancy with recommended_action=write_off
-- If GSTIN matches and delta is small → match_itc
+- not_in_2b â†’ use defer_invoice action
+- amount_diff < 1000 â†’ accept_mismatch
+- amount_diff > 10000 â†’ flag_discrepancy with recommended_action=dispute
+- fake_invoice â†’ flag_discrepancy with recommended_action=dispute
+- cancelled â†’ flag_discrepancy with recommended_action=hold_itc
+- duplicate â†’ flag_discrepancy with recommended_action=write_off
+- If GSTIN matches and delta is small â†’ match_itc
 
 Choose ONE action. Respond with exactly ONE of these JSON formats:
 
@@ -216,8 +216,8 @@ def _task3_prompt(obs: GSTObservation, section: str) -> str:
         "3.1b": "Zero-rated outward supplies",
         "3.1c": "Exempt outward supplies",
         "3.1d": "Inward supplies liable to reverse charge",
-        "4a":   "ITC available — IGST (Input Tax Credit)",
-        "4b":   "ITC to be reversed — Section 17(5) ineligible items",
+        "4a":   "ITC available â€” IGST (Input Tax Credit)",
+        "4b":   "ITC to be reversed â€” Section 17(5) ineligible items",
         "6.1":  "IGST tax payable on outward supplies",
         "6.2":  "CGST tax payable on outward supplies",
         "6.3":  "SGST tax payable on outward supplies",
@@ -225,7 +225,7 @@ def _task3_prompt(obs: GSTObservation, section: str) -> str:
 
     return f"""Fill GSTR-3B section {section}. Respond with JSON only.
 
-Section: {section} — {section_descriptions.get(section, '')}
+Section: {section} â€” {section_descriptions.get(section, '')}
 
 Current GSTR-3B state:
   taxable_outward: {gstr.taxable_outward}
@@ -243,17 +243,17 @@ Matched ITC: {obs.matched_itc_amount:.2f}
 Steps remaining: {obs.steps_remaining}
 
 ITC offset rules (legally mandated):
-  IGST ITC → offsets IGST first, then CGST, then SGST
-  CGST ITC → offsets CGST only
-  SGST ITC → offsets SGST only
+  IGST ITC â†’ offsets IGST first, then CGST, then SGST
+  CGST ITC â†’ offsets CGST only
+  SGST ITC â†’ offsets SGST only
 
 Respond with exactly:
 {{"action_type":"set_section_value","section":"{section}","value":<float>}}"""
 
 
-# ─────────────────────────────────────────────────────────────────────────────
+# â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 # LLM call + action parser
-# ─────────────────────────────────────────────────────────────────────────────
+# â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 def _call_llm(prompt: str, task_id: int) -> dict:
     """Call the LLM and return the parsed JSON action dict."""
@@ -346,9 +346,9 @@ def _parse_action(data: dict, obs: GSTObservation) -> Optional[GSTAction]:
         return None
 
 
-# ─────────────────────────────────────────────────────────────────────────────
+# â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 # Fallback actions (used when LLM parse fails)
-# ─────────────────────────────────────────────────────────────────────────────
+# â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 def _fallback_action(obs: GSTObservation, task_id: int) -> GSTAction:
     """Deterministic fallback when LLM returns unparseable output."""
@@ -427,16 +427,16 @@ def _fallback_action(obs: GSTObservation, task_id: int) -> GSTAction:
         )
 
 
-# ─────────────────────────────────────────────────────────────────────────────
+# â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 # Episode runner
-# ─────────────────────────────────────────────────────────────────────────────
+# â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 def run_episode(task_id: int = 1, seed: int = 42) -> bool:
     """
     Run one full episode for the given task.
     Returns True if episode completed successfully.
 
-    Emits [START], [STEP]×n, [END] to stdout.
+    Emits [START], [STEP]Ã—n, [END] to stdout.
     """
     task_name = TASK_NAMES[task_id]
     env = GSTEnvironment()
@@ -444,7 +444,7 @@ def run_episode(task_id: int = 1, seed: int = 42) -> bool:
     steps = 0
     success = False
 
-    # ── [START] ──────────────────────────────────────────────────────────────
+    # â”€â”€ [START] â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     print(f"[START] task={task_name} env=gst-intelligence model={MODEL_NAME}", flush=True)
 
     try:
@@ -459,7 +459,7 @@ def run_episode(task_id: int = 1, seed: int = 42) -> bool:
             steps = step_n
             error_str = "null"
 
-            # ── Choose action ─────────────────────────────────────────────
+            # â”€â”€ Choose action â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
             try:
                 if task_id == 1:
                     prompt = _task1_prompt(obs)
@@ -486,7 +486,7 @@ def run_episode(task_id: int = 1, seed: int = 42) -> bool:
             except Exception:
                 action = _fallback_action(obs, task_id)
 
-            # ── env.step() ───────────────────────────────────────────────
+            # â”€â”€ env.step() â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
             obs, reward, terminated, truncated, info = env.step(action)
             rewards_log.append(reward)
 
@@ -494,7 +494,7 @@ def run_episode(task_id: int = 1, seed: int = 42) -> bool:
             error_str  = last_error if last_error else "null"
             done_flag  = "true" if (terminated or truncated) else "false"
 
-            # ── [STEP] ───────────────────────────────────────────────────
+            # â”€â”€ [STEP] â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
             action_str = action.to_action_str()
             print(
                 f"[STEP] step={step_n} action={action_str} "
@@ -510,15 +510,11 @@ def run_episode(task_id: int = 1, seed: int = 42) -> bool:
                 success = terminated and not reward_signal_failed(rewards_log)
                 break
 
-        success = True  # reached end without uncaught exception
+        # Loop exhausted all steps without a terminal signal â€” episode failed
+        # (success remains False from initialisation)
 
-    except Exception as exc:
-        error_msg = str(exc).replace("\n", " ")
-        print(
-            f"[STEP] step={steps + 1} action=error reward=0.00 done=true error={error_msg}",
-            flush=True,
-        )
-        success = False
+    except Exception:
+        success = False  # [STEP] is NOT emitted here â€” only after env.step()
 
     finally:
         env.close()
@@ -536,14 +532,14 @@ def reward_signal_failed(rewards: list[float]) -> bool:
     return sum(rewards) < -2.0
 
 
-# ─────────────────────────────────────────────────────────────────────────────
+# â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 # Entry point
-# ─────────────────────────────────────────────────────────────────────────────
+# â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 if __name__ == "__main__":
     import argparse
 
-    parser = argparse.ArgumentParser(description="GST Intelligence RL — Inference")
+    parser = argparse.ArgumentParser(description="GST Intelligence RL â€” Inference")
     parser.add_argument("--task",  type=int, default=1, choices=[1, 2, 3], help="Task ID")
     parser.add_argument("--seed",  type=int, default=42,                   help="Episode seed")
     args = parser.parse_args()
