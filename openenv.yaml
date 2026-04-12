@@ -1,0 +1,60 @@
+name: gst-intelligence-env
+version: "1.0.0"
+description: >
+  RL environment for automated Indian GST workflows:
+  invoice classification, ITC reconciliation, and GSTR-3B filing.
+  Real-world task simulation for SME accounting automation.
+
+interface:
+  step:  "step(action: GSTAction) -> Tuple[GSTObservation, float, bool, bool, dict]"
+  reset: "reset(task_id: int, seed: int) -> GSTObservation"
+  state: "state() -> dict"
+
+tasks:
+  - id: 1
+    name: invoice_classification
+    difficulty: easy
+    max_steps: 50
+    score_range: [0.0, 1.0]
+    description: >
+      Classify each invoice with correct GST parameters:
+      invoice type, HSN code, GST slab, ITC eligibility, and RCM flag.
+
+  - id: 2
+    name: itc_reconciliation
+    difficulty: medium
+    max_steps: 150
+    score_range: [0.0, 1.0]
+    description: >
+      Match purchase register invoices against GSTR-2B entries.
+      Flag discrepancies with correct type and recommended action.
+
+  - id: 3
+    name: gstr3b_filing
+    difficulty: hard
+    max_steps: 300
+    score_range: [0.0, 1.0]
+    description: >
+      Complete end-to-end GSTR-3B return: compute outward liability,
+      apply ITC reversals, offset credits, and submit the return.
+
+constraints:
+  max_vcpu: 2
+  max_ram_gb: 8
+  max_inference_minutes: 20
+
+deployment:
+  docker: true
+  huggingface_spaces: true
+  hf_tag: openenv
+  space_must_be_running: true
+
+reward:
+  type: dense
+  range: [-1.0, 1.0]
+  partial_credit: true
+  penalizes:
+    - infinite_loops
+    - invalid_actions
+    - incorrect_filings
+    - fake_itc_claims

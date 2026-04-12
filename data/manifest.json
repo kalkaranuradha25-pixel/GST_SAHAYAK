@@ -1,0 +1,17 @@
+{
+  "train": {
+    "n_episodes": 800,
+    "base_seed": 42,
+    "task_distribution": "round-robin 1/2/3"
+  },
+  "val": {
+    "n_episodes": 100,
+    "base_seed": 999,
+    "task_distribution": "round-robin 1/2/3"
+  },
+  "test": {
+    "n_episodes": 100,
+    "base_seed": null,
+    "task_distribution": "34/33/33 curated"
+  }
+}
