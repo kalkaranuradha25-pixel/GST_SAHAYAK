@@ -1,0 +1,92 @@
+{
+  "version": "2024-04",
+  "source": "CGST Act 2017 + Amendments",
+
+  "invoice_types": {
+    "B2B":    "Supply to registered person (GSTIN required)",
+    "B2C":    "Supply to unregistered consumer (no GSTIN)",
+    "EXPORT": "Export of goods/services (zero-rated)",
+    "RCM":    "Reverse Charge Mechanism — recipient pays tax",
+    "ISD":    "Input Service Distributor"
+  },
+
+  "gst_slabs": {
+    "0":    "Nil rated — basic necessities (milk, fresh veg, books)",
+    "5":    "Essential goods — sugar, tea, coffee, fertilisers",
+    "12":   "Standard goods — medicines, processed food, textiles > ₹1000",
+    "18":   "Standard rate — IT services, electronics, FMCG",
+    "28":   "Luxury / sin goods — cars, tobacco, aerated drinks",
+    "exempt": "Exempt from GST entirely — healthcare, education"
+  },
+
+  "itc_eligibility_rules": {
+    "eligible": [
+      "Capital goods used in business",
+      "Input goods for manufacturing",
+      "Input services directly related to business",
+      "Works contract services for plant and machinery"
+    ],
+    "ineligible_section_17_5": [
+      "Motor vehicles (unless used for specific purposes)",
+      "Food and beverages",
+      "Health and beauty services",
+      "Life/health insurance (unless employer obligation)",
+      "Club membership",
+      "Travel benefits to employees",
+      "Works contract for building/civil structure"
+    ]
+  },
+
+  "rcm_supplies": [
+    "Legal services by advocate",
+    "Services by director to company",
+    "Import of services",
+    "Goods Transport Agency (GTA)",
+    "Sponsorship services",
+    "Insurance agent services",
+    "Recovery agent services",
+    "Authors and publishers"
+  ],
+
+  "gstr3b_sections": {
+    "3.1a": "Outward taxable supplies (other than zero-rated, exempt)",
+    "3.1b": "Outward taxable supplies (zero-rated)",
+    "3.1c": "Other outward supplies (exempt)",
+    "3.1d": "Inward supplies liable to reverse charge",
+    "4a":   "ITC available — Input Tax Credit (IGST)",
+    "4b":   "ITC reversed — Section 17(5) ineligible",
+    "6.1":  "Tax payable — IGST",
+    "6.2":  "Tax payable — CGST",
+    "6.3":  "Tax payable — SGST"
+  },
+
+  "itc_offset_rules": {
+    "igst_itc_offset_order": ["IGST liability", "CGST liability", "SGST liability"],
+    "cgst_itc_offset_order": ["CGST liability only"],
+    "sgst_itc_offset_order": ["SGST liability only"],
+    "note": "CGST ITC cannot offset SGST and vice versa. IGST ITC can offset all."
+  },
+
+  "mismatch_actions": {
+    "not_in_2b":                 "defer_invoice — wait for supplier to file",
+    "amount_diff_lt_1000":       "accept_mismatch — immaterial difference",
+    "amount_diff_gt_10000":      "flag_discrepancy → dispute",
+    "cancelled":                 "flag_discrepancy → hold_itc",
+    "fake_invoice":              "flag_discrepancy → dispute",
+    "duplicate":                 "flag_discrepancy → write_off",
+    "rate_mismatch":             "flag_discrepancy → dispute"
+  },
+
+  "gstin_validation": {
+    "format":   "2-digit state code + 10-char PAN + 1-digit entity + Z + 1 check digit",
+    "length":   15,
+    "checksum": "Mod-36 weighted sum algorithm"
+  },
+
+  "penalties": {
+    "late_filing":        "18% per annum interest on unpaid tax",
+    "fake_itc_claim":     "100% penalty + imprisonment up to 5 years",
+    "underpayment":       "18% interest + 10% penalty",
+    "non_filing":         "₹100/day (CGST) + ₹100/day (SGST), max ₹5000"
+  }
+}
