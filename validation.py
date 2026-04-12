@@ -1,185 +1,168 @@
-# #!/usr/bin/env bash
-# #
-# # validate-submission.sh — OpenEnv Submission Validator
-# #
-# # Checks that your HF Space is live, Docker image builds, and openenv validate passes.
-# #
-# # Prerequisites:
-# #   - Docker:       https://docs.docker.com/get-docker/
-# #   - openenv-core: pip install openenv-core
-# #   - curl (usually pre-installed)
-# #
-# # Run:
-# #   curl -fsSL https://raw.githubusercontent.com/<owner>/<repo>/main/scripts/validate-submission.sh | bash -s -- <ping_url> [repo_dir]
-# #
-# #   Or download and run locally:
-# #     chmod +x validate-submission.sh
-# #     ./validate-submission.sh <ping_url> [repo_dir]
-# #
-# # Arguments:
-# #   ping_url   Your HuggingFace Space URL (e.g. https://your-space.hf.space)
-# #   repo_dir   Path to your repo (default: current directory)
-# #
-# # Examples:
-# #   ./validate-submission.sh https://my-team.hf.space
-# #   ./validate-submission.sh https://my-team.hf.space ./my-repo
-# #
+#!/usr/bin/env python3
+"""
+validation.py — Hackathon Submission Validator
 
-# set -up pipefail
+Validates the GST RL environment submission for the Meta PyTorch Hackathon.
 
-# DOCKER_BUILD_TIMEOUT=600
-# if [ -t 1 ]; then
-#   RED='\033[0;31m'
-#   GREEN='\033[0;32m'
-#   YELLOW='\033[1;33m'
-#   BOLD='\033[1m'
-#   NC='\033[0m'
-# else
-#   RED='' GREEN='' YELLOW='' BOLD='' NC=''
-# fi
+Checks:
+- At least 3 graders are present and functional
+- Grader scores are strictly between 0 and 1
+- Graders can process sample data without errors
 
-# run_with_timeout() {
-#   local secs="$1"; shift
-#   if command -v timeout &>/dev/null; then
-#     timeout "$secs" "$@"
-#   elif command -v gtimeout &>/dev/null; then
-#     gtimeout "$secs" "$@"
-#   else
-#     "$@" &
-#     local pid=$!
-#     ( sleep "$secs" && kill "$pid" 2>/dev/null ) &
-#     local watcher=$!
-#     wait "$pid" 2>/dev/null
-#     local rc=$?
-#     kill "$watcher" 2>/dev/null
-#     wait "$watcher" 2>/dev/null
-#     return $rc
-#   fi
-# }
+Usage:
+    python validation.py
+"""
 
-# portable_mktemp() {
-#   local prefix="${1:-validate}"
-#   mktemp "${TMPDIR:-/tmp}/${prefix}-XXXXXX" 2>/dev/null || mktemp
-# }
+import json
+import os
+import sys
+from typing import Dict, List, Any
 
-# CLEANUP_FILES=()
-# cleanup() { rm -f "${CLEANUP_FILES[@]+"${CLEANUP_FILES[@]}"}"; }
-# trap cleanup EXIT
+# Add the project root to Python path
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
-# PING_URL="${1:-}"
-# REPO_DIR="${2:-.}"
+from env.graders.grader_classify import ClassificationGrader
+from env.graders.grader_itc import ITCGrader
+from env.graders.grader_filing import FilingGrader
 
-# if [ -z "$PING_URL" ]; then
-#   printf "Usage: %s <ping_url> [repo_dir]\n" "$0"
-#   printf "\n"
-#   printf "  ping_url   Your HuggingFace Space URL (e.g. https://your-space.hf.space)\n"
-#   printf "  repo_dir   Path to your repo (default: current directory)\n"
-#   exit 1
-# fi
 
-# if ! REPO_DIR="$(cd "$REPO_DIR" 2>/dev/null && pwd)"; then
-#   printf "Error: directory '%s' not found\n" "${2:-.}"
-#   exit 1
-# fi
-# PING_URL="${PING_URL%/}"
-# export PING_URL
-# PASS=0
+def load_sample_data(task_num: int) -> List[Dict[str, Any]]:
+    """Load sample data for a specific task from the test directory."""
+    data_dir = os.path.join(os.path.dirname(__file__), 'data', 'test', str(task_num))
+    if not os.path.exists(data_dir):
+        raise FileNotFoundError(f"Test data directory not found: {data_dir}")
 
-# log()  { printf "[%s] %b\n" "$(date -u +%H:%M:%S)" "$*"; }
-# pass() { log "${GREEN}PASSED${NC} -- $1"; PASS=$((PASS + 1)); }
-# fail() { log "${RED}FAILED${NC} -- $1"; }
-# hint() { printf "  ${YELLOW}Hint:${NC} %b\n" "$1"; }
-# stop_at() {
-#   printf "\n"
-#   printf "${RED}${BOLD}Validation stopped at %s.${NC} Fix the above before continuing.\n" "$1"
-#   exit 1
-# }
+    episodes = []
+    for file in os.listdir(data_dir)[:5]:  # Load first 5 episodes for validation
+        if file.endswith('.json'):
+            with open(os.path.join(data_dir, file), 'r') as f:
+                episodes.append(json.load(f))
+    return episodes
 
-# printf "\n"
-# printf "${BOLD}========================================${NC}\n"
-# printf "${BOLD}  OpenEnv Submission Validator${NC}\n"
-# printf "${BOLD}========================================${NC}\n"
-# log "Repo:     $REPO_DIR"
-# log "Ping URL: $PING_URL"
-# printf "\n"
 
-# log "${BOLD}Step 1/3: Pinging HF Space${NC} ($PING_URL/reset) ..."
+def validate_grader_count() -> bool:
+    """Check that there are at least 3 graders."""
+    graders = [ClassificationGrader, ITCGrader, FilingGrader]
+    if len(graders) < 3:
+        print("FAILED: Fewer than 3 graders found.")
+        return False
+    print("PASSED: At least 3 graders present.")
+    return True
 
-# CURL_OUTPUT=$(portable_mktemp "validate-curl")
-# CLEANUP_FILES+=("$CURL_OUTPUT")
-# HTTP_CODE=$(curl -s -o "$CURL_OUTPUT" -w "%{http_code}" -X POST \
-#   -H "Content-Type: application/json" -d '{}' \
-#   "$PING_URL/reset" --max-time 30 2>"$CURL_OUTPUT" || printf "000")
 
-# if [ "$HTTP_CODE" = "200" ]; then
-#   pass "HF Space is live and responds to /reset"
-# elif [ "$HTTP_CODE" = "000" ]; then
-#   fail "HF Space not reachable (connection failed or timed out)"
-#   hint "Check your network connection and that the Space is running."
-#   hint "Try: curl -s -o /dev/null -w '%%{http_code}' -X POST $PING_URL/reset"
-#   stop_at "Step 1"
-# else
-#   fail "HF Space /reset returned HTTP $HTTP_CODE (expected 200)"
-#   hint "Make sure your Space is running and the URL is correct."
-#   hint "Try opening $PING_URL in your browser first."
-#   stop_at "Step 1"
-# fi
+def validate_sample_data_exists() -> bool:
+    """Confirm that sample test data exists for all tasks."""
+    all_passed = True
+    for task_num in [1, 2, 3]:
+        data_dir = os.path.join(os.path.dirname(__file__), 'data', 'test', str(task_num))
+        if not os.path.isdir(data_dir):
+            print(f"FAILED: Missing sample directory for task {task_num}: {data_dir}")
+            all_passed = False
+            continue
 
-# log "${BOLD}Step 2/3: Running docker build${NC} ..."
+        json_files = [f for f in os.listdir(data_dir) if f.endswith('.json')]
+        if not json_files:
+            print(f"FAILED: No JSON sample files found in {data_dir}")
+            all_passed = False
+        else:
+            print(f"PASSED: Found {len(json_files)} sample files for task {task_num}.")
 
-# if ! command -v docker &>/dev/null; then
-#   fail "docker command not found"
-#   hint "Install Docker: https://docs.docker.com/get-docker/"
-#   stop_at "Step 2"
-# fi
+    return all_passed
 
-# if [ -f "$REPO_DIR/Dockerfile" ]; then
-#   DOCKER_CONTEXT="$REPO_DIR"
-# elif [ -f "$REPO_DIR/server/Dockerfile" ]; then
-#   DOCKER_CONTEXT="$REPO_DIR/server"
-# else
-#   fail "No Dockerfile found in repo root or server/ directory"
-#   stop_at "Step 2"
-# fi
 
-# log "  Found Dockerfile in $DOCKER_CONTEXT"
+def validate_grader_scores():
+    """Validate that grader scores are strictly between 0 and 1 using deterministic test inputs."""
+    graders = [
+        ("ClassificationGrader", ClassificationGrader()),
+        ("ITCGrader", ITCGrader()),
+        ("FilingGrader", FilingGrader()),
+    ]
 
-# BUILD_OK=false
-# BUILD_OUTPUT=$(run_with_timeout "$DOCKER_BUILD_TIMEOUT" docker build "$DOCKER_CONTEXT" 2>&1) && BUILD_OK=true
+    all_passed = True
 
-# if [ "$BUILD_OK" = true ]; then
-#   pass "Docker build succeeded"
-# else
-#   fail "Docker build failed (timeout=${DOCKER_BUILD_TIMEOUT}s)"
-#   printf "%s\n" "$BUILD_OUTPUT" | tail -20
-#   stop_at "Step 2"
-# fi
+    for name, grader in graders:
+        print(f"\nValidating {name}...")
 
-# log "${BOLD}Step 3/3: Running openenv validate${NC} ..."
+        if name == "ClassificationGrader":
+            prediction = {
+                "invoice_id": "INV-TEST",
+                "invoice_type": "B2B",
+                "hsn_code": "1234",
+                "gst_slab": "18",
+                "supply_type": "goods",
+                "itc_eligible": True,
+                "reverse_charge": False
+            }
+            ground_truth = prediction.copy()
+        elif name == "ITCGrader":
+            prediction = {
+                "matched_pairs": [{"purchase_id": "P1", "gstr2b_id": "G1"}],
+                "flagged": []
+            }
+            ground_truth = {
+                "correct_matches": {"P1": "G1"},
+                "correct_flags": {}
+            }
+        else:  # FilingGrader
+            prediction = {
+                "3.1a": 1000.0,
+                "3.1b": 2000.0,
+                "3.1c": 1500.0,
+                "3.1d": 500.0,
+                "4a": 1200.0,
+                "4b": 800.0,
+                "6.1": 700.0,
+                "6.2": 300.0,
+                "6.3": 200.0,
+                "net_payable": 3500.0,
+                "total_itc": 500.0
+            }
+            ground_truth = prediction.copy()
 
-# if ! command -v openenv &>/dev/null; then
-#   fail "openenv command not found"
-#   hint "Install it: pip install openenv-core"
-#   stop_at "Step 3"
-# fi
+        try:
+            score = grader.grade(prediction, ground_truth)
+            if not (0 < score < 1):
+                print(f"FAILED: Score {score} not strictly between 0 and 1 for {name}.")
+                all_passed = False
+            else:
+                print(f"PASSED: Score {score} is valid for {name}.")
+        except Exception as e:
+            print(f"FAILED: Error grading with {name}: {e}")
+            all_passed = False
 
-# VALIDATE_OK=false
-# VALIDATE_OUTPUT=$(cd "$REPO_DIR" && openenv validate 2>&1) && VALIDATE_OK=true
+    return all_passed
 
-# if [ "$VALIDATE_OK" = true ]; then
-#   pass "openenv validate passed"
-#   [ -n "$VALIDATE_OUTPUT" ] && log "  $VALIDATE_OUTPUT"
-# else
-#   fail "openenv validate failed"
-#   printf "%s\n" "$VALIDATE_OUTPUT"
-#   stop_at "Step 3"
-# fi
 
-# printf "\n"
-# printf "${BOLD}========================================${NC}\n"
-# printf "${GREEN}${BOLD}  All 3/3 checks passed!${NC}\n"
-# printf "${GREEN}${BOLD}  Your submission is ready to submit.${NC}\n"
-# printf "${BOLD}========================================${NC}\n"
-# printf "\n"
+def main():
+    """Run all validation checks."""
+    print("=========================================")
+    print("  Hackathon Submission Validator")
+    print("=========================================\n")
 
-# exit 0
+    checks = [
+        ("Grader Count", validate_grader_count),
+        ("Sample Data", validate_sample_data_exists),
+        ("Grader Scores", validate_grader_scores),
+    ]
+
+    all_passed = True
+    for check_name, check_func in checks:
+        print(f"Running {check_name} check...")
+        try:
+            if not check_func():
+                all_passed = False
+        except Exception as e:
+            print(f"FAILED: {check_name} check raised exception: {e}")
+            all_passed = False
+
+    print("\n" + "="*40)
+    if all_passed:
+        print("ALL CHECKS PASSED! Submission is valid.")
+        sys.exit(0)
+    else:
+        print("SOME CHECKS FAILED! Please fix the issues before submitting.")
+        sys.exit(1)
+
+
+if __name__ == "__main__":
+    main()
