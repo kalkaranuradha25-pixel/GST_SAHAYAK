@@ -51,7 +51,8 @@ class FilingGrader(BaseGrader):
         overclaim = -0.50 if true_itc > 0 and agent_itc > true_itc * 1.02 else 0.0
 
         final = base + underpay + overclaim
-        return round(max(0.0, min(1.0, final)), 4)
+        final_score = max(0.01, min(0.99, final))
+        return round(final_score, 4)
 
     def section_breakdown(self, prediction: dict, ground_truth: dict) -> dict[str, float]:
         """Per-section accuracy breakdown for audit/debug."""

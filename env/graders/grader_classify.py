@@ -73,12 +73,17 @@ class ClassificationGrader(BaseGrader):
         if bool(prediction.get("reverse_charge")) == bool(ground_truth.get("reverse_charge")):
             score += self.WEIGHTS["reverse_charge"]
 
-        return round(score, 4)
+        # Ensure score is strictly between 0 and 1
+        final_score = max(0.01, min(0.99, score))
+        return round(final_score, 4)
 
     def grade_batch(self, predictions: list[dict], ground_truths: list[dict]) -> float:
         """Average score over a batch of invoice classifications."""
         if not predictions or not ground_truths:
-            return 0.0
+            return 0.5  # Default to middle value
         n = min(len(predictions), len(ground_truths))
         scores = [self.grade(predictions[i], ground_truths[i]) for i in range(n)]
-        return round(sum(scores) / n, 4)
+        avg = sum(scores) / n
+        # Ensure average is strictly between 0 and 1
+        final_avg = max(0.01, min(0.99, avg))
+        return round(final_avg, 4)

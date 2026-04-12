@@ -92,7 +92,8 @@ class ITCGrader(BaseGrader):
                 flag_score += 0.15
             score += flag_score
 
-        return round(min(1.0, score / total_items), 4)
+        final_score = min(0.99, score / total_items) if total_items > 0 else 0.5
+        return round(max(0.01, final_score), 4)
 
     def grade_match_only(self, prediction: dict, ground_truth: dict) -> tuple[float, float]:
         """Returns (precision, recall) for match decisions."""

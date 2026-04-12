@@ -25,7 +25,7 @@
 # #   ./validate-submission.sh https://my-team.hf.space ./my-repo
 # #
 
-# set -uo pipefail
+# set -up pipefail
 
 # DOCKER_BUILD_TIMEOUT=600
 # if [ -t 1 ]; then
