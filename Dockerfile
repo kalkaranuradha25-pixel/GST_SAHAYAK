@@ -47,5 +47,5 @@ print('Health check OK: pending=' + str(obs.pending_count))"
 # ── Expose FastAPI port ───────────────────────────────────────────────────────
 EXPOSE 7860
 
-# ── Entry point: FastAPI server that wraps the environment ────────────────────
-CMD ["uvicorn", "server:app", "--host", "0.0.0.0", "--port", "7860", "--workers", "1"]
+# ── Entry point: Gradio UI + FastAPI (openenv endpoints) ─────────────────────
+CMD ["uvicorn", "app:app", "--host", "0.0.0.0", "--port", "7860", "--workers", "1"]

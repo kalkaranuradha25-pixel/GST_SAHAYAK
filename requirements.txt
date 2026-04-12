@@ -26,6 +26,10 @@ pyyaml>=6.0.1               # openenv.yaml parsing
 fastapi>=0.110.0
 uvicorn[standard]>=0.27.0
 
+# ─── UI ──────────────────────────────────────────────────────────────────────
+gradio>=4.44.0
+pandas>=2.0.0
+
 # ─── OpenEnv CLI (for openenv validate) ──────────────────────────────────────
 # openenv-cli>=0.1.0        # Uncomment if available on PyPI at submission time
 
