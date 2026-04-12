@@ -510,15 +510,11 @@ def run_episode(task_id: int = 1, seed: int = 42) -> bool:
                 success = terminated and not reward_signal_failed(rewards_log)
                 break
 
-        success = True  # reached end without uncaught exception
+        # Loop exhausted all steps without a terminal signal — episode failed
+        # (success remains False from initialisation)
 
-    except Exception as exc:
-        error_msg = str(exc).replace("\n", " ")
-        print(
-            f"[STEP] step={steps + 1} action=error reward=0.00 done=true error={error_msg}",
-            flush=True,
-        )
-        success = False
+    except Exception:
+        success = False  # [STEP] is NOT emitted here — only after env.step()
 
     finally:
         env.close()
