@@ -913,6 +913,12 @@ app  = gr.mount_gradio_app(fastapi_app, demo, path="/")
 # Local dev
 # ─────────────────────────────────────────────────────────────────────────────
 
+def main():
+    """Entry point for `gst-serve` CLI (defined in pyproject.toml)."""
+    import uvicorn
+    uvicorn.run("app:app", host="0.0.0.0", port=7860, workers=1)
+
+
 if __name__ == "__main__":
     demo.launch(
         server_name="0.0.0.0",

@@ -536,7 +536,8 @@ def reward_signal_failed(rewards: list[float]) -> bool:
 # Entry point
 # ─────────────────────────────────────────────────────────────────────────────
 
-if __name__ == "__main__":
+def main():
+    """Entry point for `gst-inference` CLI (defined in pyproject.toml)."""
     import argparse
 
     parser = argparse.ArgumentParser(description="GST Intelligence RL — Inference")
@@ -545,3 +546,7 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     run_episode(task_id=args.task, seed=args.seed)
+
+
+if __name__ == "__main__":
+    main()
