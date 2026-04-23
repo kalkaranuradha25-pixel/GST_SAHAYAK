@@ -903,7 +903,7 @@ def build_ui() -> gr.Blocks:
 # Mount on FastAPI (keeps /reset /step /state /close for openenv)
 # ─────────────────────────────────────────────────────────────────────────────
 
-from server import app as fastapi_app
+from server.app import app as fastapi_app
 
 demo = build_ui()
 app  = gr.mount_gradio_app(fastapi_app, demo, path="/")
